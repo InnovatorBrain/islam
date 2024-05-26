@@ -1,3 +1,4 @@
+# models.py
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 
@@ -24,11 +25,6 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
-"""
-This is the User Model
-"""
-
-
 class CustomUser(AbstractUser):
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
@@ -39,6 +35,8 @@ class CustomUser(AbstractUser):
     )
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
+    is_student = models.BooleanField(default=False)
+    is_teacher = models.BooleanField(default=False)
     bio = models.TextField(blank=True)
     address = models.CharField(max_length=255, blank=True)
     objects = CustomUserManager()
@@ -69,11 +67,6 @@ class CustomUser(AbstractUser):
         self.is_admin = value
 
 
-"""
-Just Including Profile Picture in Profile-Data 
-"""
-
-
 class ProfilePicture(models.Model):
     custom_user = models.OneToOneField(
         CustomUser, on_delete=models.CASCADE, related_name="profile_picture"
@@ -82,3 +75,24 @@ class ProfilePicture(models.Model):
 
     def __str__(self):
         return f"{self.custom_user.email} ProfilePicture"
+
+
+class StudentProfile(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='student_profile')
+    enrolled_date = models.DateField()
+    teacher = models.ForeignKey('TeacherProfile', on_delete=models.SET_NULL, null=True, related_name='students')
+    grade = models.CharField(max_length=10)
+    parent_contact = models.CharField(max_length=15, blank=True)
+
+    def __str__(self):
+        return f"{self.user.email} StudentProfile"
+
+
+class TeacherProfile(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='teacher_profile')
+    subject = models.CharField(max_length=100)
+    experience = models.IntegerField()
+    qualifications = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.user.email} TeacherProfile"

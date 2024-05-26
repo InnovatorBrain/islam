@@ -1,19 +1,13 @@
 from django.core.mail import EmailMessage
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.encoding import force_bytes, force_str
-from django.utils.http import urlsafe_base64_encode
-from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str, smart_str, DjangoUnicodeDecodeError
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from .models import CustomUser as User
-from .models import ProfilePicture
+from .models import CustomUser as User, ProfilePicture, StudentProfile, TeacherProfile
 from .utils import Util
-
-# Email imports
-from django.utils.encoding import smart_str, force_bytes, DjangoUnicodeDecodeError
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 """
@@ -26,7 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "email", "password", "confirm_password"]
+        fields = ["first_name", "last_name", "email", "password", "confirm_password", "is_student", "is_teacher"]
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):
@@ -41,6 +35,8 @@ class UserSerializer(serializers.ModelSerializer):
             email=validated_data["email"],
             username=validated_data["email"],  # Use email as username
             password=validated_data["password"],
+            is_student=validated_data.get("is_student", False),
+            is_teacher=validated_data.get("is_teacher", False),
         )
         return user
 
@@ -110,30 +106,23 @@ class UserProfileSerializer(serializers.ModelSerializer):
         if profile_picture_data:
             profile_picture = instance.profile_picture
             if profile_picture:
-                profile_picture.image = profile_picture_data.get(
-                    "image", profile_picture.image
-                )
+                profile_picture.image = profile_picture_data.get("image", profile_picture.image)
                 profile_picture.save()
             else:
-                ProfilePicture.objects.create(
-                    custom_user=instance, **profile_picture_data
-                )
+                ProfilePicture.objects.create(custom_user=instance, **profile_picture_data)
 
         instance.save()
         return instance
 
 
-"""Password Change Serializer
+"""
+Password Change Serializer
 """
 
 
 class CustomPasswordResetSerializer(serializers.Serializer):
-    password = serializers.CharField(
-        max_length=128, style={"input_type": "password"}, write_only=True
-    )
-    confirm_password = serializers.CharField(
-        max_length=128, style={"input_type": "password"}, write_only=True
-    )
+    password = serializers.CharField(max_length=128, style={"input_type": "password"}, write_only=True)
+    confirm_password = serializers.CharField(max_length=128, style={"input_type": "password"}, write_only=True)
 
     class Meta:
         fields = ["password", "confirm_password"]
@@ -204,15 +193,7 @@ class SendPasswordResetEmailSerializer(serializers.Serializer):
     def create(self, validated_data):
         return {}
 
-    def format_body(
-        self,
-        recipient_name,
-        recipient_username,
-        link,
-        sender_name,
-        sender_position,
-        sender_contact,
-    ):
+    def format_body(self, recipient_name, recipient_username, link, sender_name, sender_position, sender_contact):
         body = f"""
 🌾 AI and Blockchain-Based Crop Insurance 🌱 
 
@@ -238,12 +219,8 @@ Through Email Password Reset
 
 
 class UserPasswordResetSerializer(serializers.Serializer):
-    password = serializers.CharField(
-        max_length=255, style={"input_type": "password"}, write_only=True
-    )
-    confirm_password = serializers.CharField(
-        max_length=255, style={"input_type": "password"}, write_only=True
-    )
+    password = serializers.CharField(max_length=255, style={"input_type": "password"}, write_only=True)
+    confirm_password = serializers.CharField(max_length=255, style={"input_type": "password"}, write_only=True)
 
     def validate(self, attrs):
         try:
@@ -252,9 +229,7 @@ class UserPasswordResetSerializer(serializers.Serializer):
             uid = self.context.get("uid")
             token = self.context.get("token")
             if password != confirm_password:
-                raise serializers.ValidationError(
-                    "Password and Confirm Password doesn't match"
-                )
+                raise serializers.ValidationError("Password and Confirm Password doesn't match")
             id = smart_str(urlsafe_base64_decode(uid))
             user = User.objects.get(id=id)
             if not PasswordResetTokenGenerator().check_token(user, token):
@@ -268,3 +243,80 @@ class UserPasswordResetSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         return {}
+
+
+"""
+Student and Teacher Profile Serializers
+"""
+
+class StudentProfileSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+
+    class Meta:
+        model = StudentProfile
+        fields = ['id', 'user', 'enrolled_date', 'teacher', 'grade', 'parent_contact']
+
+    def create(self, validated_data):
+        user_data = validated_data.pop('user')
+        user = User.objects.create_user(
+            first_name=user_data['first_name'],
+            last_name=user_data['last_name'],
+            email=user_data['email'],
+            username=user_data['email'],
+            password=user_data['password'],
+            is_student=True,
+        )
+        student_profile = StudentProfile.objects.create(user=user, **validated_data)
+        return student_profile
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user')
+        user = instance.user
+        user.first_name = user_data.get('first_name', user.first_name)
+        user.last_name = user_data.get('last_name', user.last_name)
+        user.email = user_data.get('email', user.email)
+        user.set_password(user_data.get('password'))
+        user.save()
+
+        instance.enrolled_date = validated_data.get('enrolled_date', instance.enrolled_date)
+        instance.teacher = validated_data.get('teacher', instance.teacher)
+        instance.grade = validated_data.get('grade', instance.grade)
+        instance.parent_contact = validated_data.get('parent_contact', instance.parent_contact)
+        instance.save()
+        return instance
+
+
+class TeacherProfileSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+
+    class Meta:
+        model = TeacherProfile
+        fields = ['id', 'user', 'subject', 'experience', 'qualifications']
+
+    def create(self, validated_data):
+        user_data = validated_data.pop('user')
+        user = User.objects.create_user(
+            first_name=user_data['first_name'],
+            last_name=user_data['last_name'],
+            email=user_data['email'],
+            username=user_data['email'],
+            password=user_data['password'],
+            is_teacher=True,
+        )
+        teacher_profile = TeacherProfile.objects.create(user=user, **validated_data)
+        return teacher_profile
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user')
+        user = instance.user
+        user.first_name = user_data.get('first_name', user.first_name)
+        user.last_name = user_data.get('last_name', user.last_name)
+        user.email = user_data.get('email', user.email)
+        user.set_password(user_data.get('password'))
+        user.save()
+
+        instance.subject = validated_data.get('subject', instance.subject)
+        instance.experience = validated_data.get('experience', instance.experience)
+        instance.qualifications = validated_data.get('qualifications', instance.qualifications)
+        instance.save()
+        return instance

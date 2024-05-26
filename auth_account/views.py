@@ -1,36 +1,28 @@
-from django.contrib.auth import authenticate
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, logout
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
-from rest_framework import status
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import DjangoModelPermissionsOrAnonReadOnly
-from rest_framework.permissions import AllowAny
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, DjangoModelPermissionsOrAnonReadOnly
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import CustomUser as User
-from django.contrib.auth import logout
-from .models import ProfilePicture
+from .models import CustomUser as User, ProfilePicture, StudentProfile, TeacherProfile
 from .serializers import (
     UserSerializer,
     UserProfileSerializer,
     CustomPasswordResetSerializer,
     SendPasswordResetEmailSerializer,
     UserPasswordResetSerializer,
-    UserProfileSerializer,
     ProfilePictureSerializer,
+    StudentProfileSerializer,
+    TeacherProfileSerializer,
 )
 
 """
 Generate Token Manually
 """
-
-
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
-
     return {
         "refresh": str(refresh),
         "access": str(refresh.access_token),
@@ -41,8 +33,7 @@ class TokenValidationView(APIView):
 
     def get(self, request):
         return Response({"message": "Token is valid"}, status=status.HTTP_200_OK)
-    
-    
+
 class UserSignupView(APIView):
     permission_classes = [AllowAny]
 
@@ -56,7 +47,6 @@ class UserSignupView(APIView):
                 status=status.HTTP_201_CREATED,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class UserLoginView(APIView):
     permission_classes = [AllowAny]
@@ -86,13 +76,12 @@ class UserLoginView(APIView):
             )
 
 class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]  
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         logout(request)
         return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
-    
-   
+
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -108,7 +97,6 @@ class UserProfileView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class ProfilePictureView(APIView):
     queryset = ProfilePicture.objects.all()
@@ -132,7 +120,6 @@ class ProfilePictureView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class CustomPasswordResetView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -149,12 +136,9 @@ class CustomPasswordResetView(APIView):
             {"error": "Invalid request"}, status=status.HTTP_400_BAD_REQUEST
         )
 
-
 """
 Reset Password Email
 """
-
-
 class SendPasswordResetEmailView(APIView):
     permission_classes = [AllowAny]
 
@@ -168,7 +152,6 @@ class SendPasswordResetEmailView(APIView):
                 {"message": "Password reset email sent successfully"},
                 status=status.HTTP_200_OK,
             )
-
 
 class UserPasswordResetView(APIView):
     permission_classes = [AllowAny]
@@ -184,3 +167,62 @@ class UserPasswordResetView(APIView):
             )
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+"""
+Student and Teacher Profile Views
+"""
+class StudentProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        student_profile = StudentProfile.objects.filter(user=request.user).first()
+        if student_profile:
+            serializer = StudentProfileSerializer(student_profile)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"error": "Student profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request, format=None):
+        user = request.user
+        serializer = StudentProfileSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, format=None):
+        student_profile = StudentProfile.objects.filter(user=request.user).first()
+        if not student_profile:
+            return Response({"error": "Student profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        serializer = StudentProfileSerializer(student_profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class TeacherProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        teacher_profile = TeacherProfile.objects.filter(user=request.user).first()
+        if teacher_profile:
+            serializer = TeacherProfileSerializer(teacher_profile)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"error": "Teacher profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request, format=None):
+        user = request.user
+        serializer = TeacherProfileSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, format=None):
+        teacher_profile = TeacherProfile.objects.filter(user=request.user).first()
+        if not teacher_profile:
+            return Response({"error": "Teacher profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        serializer = TeacherProfileSerializer(teacher_profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
