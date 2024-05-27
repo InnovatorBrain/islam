@@ -254,23 +254,19 @@ Student and Teacher Profile Serializers
 """
 
 class StudentProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = StudentProfile
         fields = ['id', 'user', 'enrolled_date', 'teacher', 'grade', 'parent_contact']
 
     def create(self, validated_data):
-        user_data = validated_data.pop('user')
-        user = User.objects.create_user(
-            first_name=user_data['first_name'],
-            last_name=user_data['last_name'],
-            email=user_data['email'],
-            username=user_data['email'],
-            password=user_data['password'],
-            is_student=True,
-        )
-        student_profile = StudentProfile.objects.create(user=user, **validated_data)
+        user = validated_data.pop('user')
+        student_profile, created = StudentProfile.objects.get_or_create(user=user, defaults=validated_data)
+        if not created:
+            for attr, value in validated_data.items():
+                setattr(student_profile, attr, value)
+            student_profile.save()
         return student_profile
 
     def update(self, instance, validated_data):
@@ -291,24 +287,21 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
 
 class TeacherProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+    user = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
+
 
     class Meta:
         model = TeacherProfile
         fields = ['id', 'user', 'subject', 'experience', 'qualifications']
 
     def create(self, validated_data):
-        user_data = validated_data.pop('user')
-        user = User.objects.create_user(
-            first_name=user_data['first_name'],
-            last_name=user_data['last_name'],
-            email=user_data['email'],
-            username=user_data['email'],
-            password=user_data['password'],
-            is_teacher=True,
-        )
-        teacher_profile = TeacherProfile.objects.create(user=user, **validated_data)
-        return teacher_profile
+        user = validated_data.pop('user')
+        student_profile, created = TeacherProfile.objects.get_or_create(user=user, defaults=validated_data)
+        if not created:
+            for attr, value in validated_data.items():
+                setattr(student_profile, attr, value)
+            student_profile.save()
+        return student_profile
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user')

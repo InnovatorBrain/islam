@@ -21,8 +21,8 @@ from django.conf import settings
 """
    Admin Interface
 """
-admin.site.site_header = "CropShield Admin"
-admin.site.index_title = "CropShield Site Administration"
+admin.site.site_header = "Islamic Admin"
+admin.site.index_title = "Islamic Site Administration"
 
 urlpatterns = [
     path("admin/", admin.site.urls),

@@ -192,9 +192,9 @@ class StudentProfileView(APIView):
         return Response({"error": "Student profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, format=None):
-        serializer = StudentProfileSerializer(data=request.data)
+        serializer = StudentProfileSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(user=request.user)  # Assign the authenticated user
+            serializer.save(user=request.user)  
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -202,7 +202,7 @@ class StudentProfileView(APIView):
         student_profile = StudentProfile.objects.filter(user=request.user).first()
         if not student_profile:
             return Response({"error": "Student profile not found"}, status=status.HTTP_404_NOT_FOUND)
-        serializer = StudentProfileSerializer(student_profile, data=request.data, partial=True)
+        serializer = StudentProfileSerializer(student_profile, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -219,9 +219,9 @@ class TeacherProfileView(APIView):
         return Response({"error": "Teacher profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, format=None):
-        serializer = TeacherProfileSerializer(data=request.data)
+        serializer = TeacherProfileSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(user=request.user)  # Assign the authenticated user
+            serializer.save(user=request.user)  
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -229,7 +229,7 @@ class TeacherProfileView(APIView):
         teacher_profile = TeacherProfile.objects.filter(user=request.user).first()
         if not teacher_profile:
             return Response({"error": "Teacher profile not found"}, status=status.HTTP_404_NOT_FOUND)
-        serializer = TeacherProfileSerializer(teacher_profile, data=request.data, partial=True)
+        serializer = TeacherProfileSerializer(teacher_profile, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
