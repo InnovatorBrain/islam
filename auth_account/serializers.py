@@ -1,6 +1,6 @@
 from django.core.mail import EmailMessage
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.encoding import force_bytes, force_str, smart_str, DjangoUnicodeDecodeError
+from django.utils.encoding import force_bytes, smart_str, DjangoUnicodeDecodeError
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
@@ -86,7 +86,7 @@ class ProfilePictureSerializer(serializers.ModelSerializer):
 
 
 """
-We can add bio, address and much much more as we need latter to get more profile data
+We can add bio, address and much much more as we need later to get more profile data
 """
 
 

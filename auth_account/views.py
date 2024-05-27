@@ -48,6 +48,7 @@ class UserSignupView(APIView):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class UserLoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -111,6 +112,15 @@ class ProfilePictureView(APIView):
                 {"error": "Image data is required."}, status=status.HTTP_400_BAD_REQUEST
             )
 
+        try:
+            # Check if the user already has a profile picture
+            existing_profile_picture = ProfilePicture.objects.get(custom_user=user)
+            # Delete the existing profile picture
+            existing_profile_picture.delete()
+        except ProfilePicture.DoesNotExist:
+            pass  # If the user doesn't have a profile picture, do nothing
+        
+        # Save the new profile picture
         profile_picture_data = {"custom_user": user.id, "image": image_data}
         serializer = ProfilePictureSerializer(data=profile_picture_data)
 
