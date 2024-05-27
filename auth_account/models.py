@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
-
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -22,7 +23,6 @@ class CustomUserManager(BaseUserManager):
             raise ValueError("Superuser must have is_superuser=True.")
 
         return self.create_user(email, password, **extra_fields)
-
 
 class CustomUser(AbstractUser):
     first_name = models.CharField(max_length=150)
@@ -49,22 +49,18 @@ class CustomUser(AbstractUser):
         return self.email
 
     def has_perm(self, perm, obj=None):
-        "Does the user have a specific permission?"
         return True
 
     def has_module_perms(self, app_label):
-        "Does the user have permissions to view the app `app_label`?"
         return True
 
     @property
     def is_staff(self):
-        "Is the user a member of staff?"
         return self.is_admin
 
     @is_staff.setter
     def is_staff(self, value):
         self.is_admin = value
-
 
 class ProfilePicture(models.Model):
     custom_user = models.OneToOneField(
@@ -75,23 +71,37 @@ class ProfilePicture(models.Model):
     def __str__(self):
         return f"{self.custom_user.email} ProfilePicture"
 
-
 class StudentProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='student_profile')
-    enrolled_date = models.DateField()
-    teacher = models.ForeignKey('TeacherProfile', on_delete=models.SET_NULL, null=True, related_name='students')
-    grade = models.CharField(max_length=10)
+    enrolled_date = models.DateField(null=True, blank=True)
+    teacher = models.ForeignKey('TeacherProfile', on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
+    grade = models.CharField(max_length=10, null=True, blank=True)
     parent_contact = models.CharField(max_length=15, blank=True)
 
     def __str__(self):
         return f"{self.user.email} StudentProfile"
 
-
 class TeacherProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='teacher_profile')
-    subject = models.CharField(max_length=100)
-    experience = models.IntegerField()
+    subject = models.CharField(max_length=100, null=True, blank=True)
+    experience = models.IntegerField(null=True, blank=True)
     qualifications = models.TextField(blank=True)
 
     def __str__(self):
         return f"{self.user.email} TeacherProfile"
+
+# Signal handlers
+@receiver(post_save, sender=CustomUser)
+def create_profile(sender, instance, created, **kwargs):
+    if created:
+        if instance.is_student:
+            StudentProfile.objects.create(user=instance)
+        if instance.is_teacher:
+            TeacherProfile.objects.create(user=instance)
+
+@receiver(post_save, sender=CustomUser)
+def save_profile(sender, instance, **kwargs):
+    if instance.is_student:
+        instance.student_profile.save()
+    if instance.is_teacher:
+        instance.teacher_profile.save()

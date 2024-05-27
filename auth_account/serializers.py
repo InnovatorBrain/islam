@@ -33,7 +33,7 @@ class UserSerializer(serializers.ModelSerializer):
             first_name=validated_data["first_name"],
             last_name=validated_data["last_name"],
             email=validated_data["email"],
-            username=validated_data["email"],  # Use email as username
+            username=validated_data["email"],  
             password=validated_data["password"],
             is_student=validated_data.get("is_student", False),
             is_teacher=validated_data.get("is_teacher", False),
@@ -95,12 +95,14 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "email", "profile_picture"]
+        fields = ["first_name", "last_name", "email", "profile_picture", "bio", "address", "student_profile", 'teacher_profile']
         read_only_fields = ["email"]
 
     def update(self, instance, validated_data):
         instance.first_name = validated_data.get("first_name", instance.first_name)
         instance.last_name = validated_data.get("last_name", instance.last_name)
+        instance.bio = validated_data.get("bio", instance.bio)
+        instance.address = validated_data.get("address", instance.address)
 
         profile_picture_data = validated_data.pop("profile_picture", None)
         if profile_picture_data:
@@ -113,6 +115,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+
+
 
 
 """

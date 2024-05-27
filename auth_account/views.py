@@ -192,10 +192,9 @@ class StudentProfileView(APIView):
         return Response({"error": "Student profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, format=None):
-        user = request.user
         serializer = StudentProfileSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=user)
+            serializer.save(user=request.user)  # Assign the authenticated user
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -220,10 +219,9 @@ class TeacherProfileView(APIView):
         return Response({"error": "Teacher profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, format=None):
-        user = request.user
         serializer = TeacherProfileSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=user)
+            serializer.save(user=request.user)  # Assign the authenticated user
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

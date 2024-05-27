@@ -71,7 +71,6 @@ class TeacherProfileAdmin(admin.ModelAdmin):
         return obj.user.last_name
     user_last_name.short_description = "Last Name"
 
-# Registering the models with their custom admin configurations
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(ProfilePicture, ProfilePictureAdmin)
 admin.site.register(StudentProfile, StudentProfileAdmin)
