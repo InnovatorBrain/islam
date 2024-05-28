@@ -16,6 +16,7 @@ from .serializers import (
     ProfilePictureSerializer,
     StudentProfileSerializer,
     TeacherProfileSerializer,
+    TeacherCardSerializer,
 )
 
 """
@@ -234,3 +235,20 @@ class TeacherProfileView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class AllTeachersView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, format=None):
+        teachers = TeacherProfile.objects.all()
+        serializer = TeacherCardSerializer(teachers, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+class AllTeacherImagesView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, format=None):
+        profile_pictures = ProfilePicture.objects.all()
+        serializer = ProfilePictureSerializer(profile_pictures, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

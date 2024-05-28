@@ -317,3 +317,20 @@ class TeacherProfileSerializer(serializers.ModelSerializer):
         instance.qualifications = validated_data.get('qualifications', instance.qualifications)
         instance.save()
         return instance
+    
+class TeacherCardSerializer(serializers.ModelSerializer):
+    user_first_name = serializers.CharField(source='user.first_name')
+    user_last_name = serializers.CharField(source='user.last_name')
+    user_email = serializers.EmailField(source='user.email')
+
+    class Meta:
+        model = TeacherProfile
+        fields = ['id', 'user_first_name', 'user_last_name', 'user_email', 'subject', 'experience', 'qualifications']
+
+class ProfilePictureSerializer(serializers.ModelSerializer):
+    user_first_name = serializers.CharField(source='custom_user.first_name')
+    user_last_name = serializers.CharField(source='custom_user.last_name')
+
+    class Meta:
+        model = ProfilePicture
+        fields = ['id', 'user_first_name', 'user_last_name', 'image']
