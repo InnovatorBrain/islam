@@ -1,0 +1,3 @@
+[submodule "islam"]
+	path = islam
+	url = https://github.com/InnovatorBrain/islam.git
